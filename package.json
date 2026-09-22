@@ -1,0 +1,12 @@
+{
+  "name": "aidataparser-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Registry record for the hosted AIDataParser MCP server. No build step on purpose - scripts/deploy-batch.sh keys the no-build push path off the absence of a `build` script.",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "check:remote": "node check-remote.mjs",
+    "registry:state": "node registry-state.mjs"
+  }
+}

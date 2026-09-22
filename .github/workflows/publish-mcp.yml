@@ -1,0 +1,74 @@
+name: Publish to MCP Registry
+
+# Publishes the hosted AIDataParser MCP server to the official MCP Registry
+# (https://registry.modelcontextprotocol.io). The registry entry is the *remote*
+# Streamable HTTP endpoint, not an npm package, so no NPM_TOKEN is needed. Auth
+# is GitHub OIDC, which grants the `io.github.shibley/*` namespace from this
+# repository's identity alone - no secrets are stored anywhere.
+#
+# TRIGGER: push to main, NOT a version tag. The sibling *-mcp-server repos
+# publish on `tags: ["v*"]`, but this repo ships through
+# ~/clawd/scripts/deploy-batch.sh, whose push is `git push origin "$branch"` with
+# no --follow-tags. A tag-only trigger there never fires, which is how a repo
+# ends up committed, batched, pushed and still absent from the registry.
+# Publishing on main means the workflow also runs on commits that change nothing
+# publishable, so `registry:state` makes it a no-op when the registry already
+# holds this version. Bump `version` in server.json to cut a release.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for OIDC
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate server.json
+        run: npm test
+
+      - name: Decide whether this version needs publishing
+        id: state
+        run: npm run --silent registry:state | tee /tmp/state.txt && grep -q 'decision=PUBLISH' /tmp/state.txt && echo "publish=yes" >> "$GITHUB_OUTPUT" || echo "publish=no" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the remote endpoint is actually up before advertising it
+        if: steps.state.outputs.publish == 'yes'
+        run: npm run check:remote
+
+      - name: Install mcp-publisher
+        if: steps.state.outputs.publish == 'yes'
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        if: steps.state.outputs.publish == 'yes'
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        if: steps.state.outputs.publish == 'yes'
+        run: ./mcp-publisher publish
+
+      - name: Confirm the record is readable
+        if: steps.state.outputs.publish == 'yes'
+        run: |
+          set -euo pipefail
+          # The registry's search index is eventually consistent; poll rather
+          # than assert once.
+          for i in $(seq 1 10); do
+            if npm run --silent registry:state | grep -q 'decision=SKIP'; then
+              echo "registry record confirmed"; exit 0
+            fi
+            echo "not visible yet (attempt $i), waiting"; sleep 15
+          done
+          echo "published, but the record was not readable back within ~2.5min - check manually"
