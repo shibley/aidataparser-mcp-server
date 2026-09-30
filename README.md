@@ -24,7 +24,16 @@ the canonical upstream every downstream MCP catalog syncs from.
 }
 ```
 
-Get a key (50 free credits, no card):
+**Try it before you sign up.** `try_parse` runs a real extraction with no key,
+no email and no account — up to 4,000 characters of text, 3 calls per day. Add
+the server without the `headers` block and call it:
+
+```json
+{ "name": "try_parse", "arguments": { "text": "INVOICE #1042 ... Total due $1,240.00", "schema_id": "invoice" } }
+```
+
+When you want more, get a key (50 free credits, no card) — over MCP with the
+`create_api_key` tool, or:
 
 ```bash
 curl -X POST https://aidataparser.com/v1/keys \
@@ -32,13 +41,12 @@ curl -X POST https://aidataparser.com/v1/keys \
   -d '{"email":"you@example.com"}'
 ```
 
-`list_schemas` and `validate` are free and need **no key**, so a client can add
-the server and get something useful back before signing up.
-
 ## Tools
 
 | Tool | Cost | What it does |
 | --- | --- | --- |
+| `try_parse` | free, no key | Real extraction on ≤4,000 chars of text, 3/day — see the output before signing up |
+| `create_api_key` | free, no key | An email → a live `adp_live_` key with 50 free credits |
 | `parse_document` | 1 credit | PDF or image (`url` or `base64`) → JSON matching your schema |
 | `parse_text` | 1 credit | Raw/messy text → JSON matching your schema |
 | `infer_schema` | 1 credit | One sample → a reusable JSON Schema |

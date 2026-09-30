@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.shibley/aidataparser",
   "title": "AIDataParser",
-  "description": "Extract schema-guaranteed JSON from PDFs, images and messy text. 50 free credits, no card.",
-  "version": "0.1.0",
+  "description": "PDFs, images and messy text to schema-guaranteed JSON. try_parse runs a real extraction, no key.",
+  "version": "0.2.0",
   "websiteUrl": "https://aidataparser.com",
   "repository": {
     "url": "https://github.com/shibley/aidataparser-mcp-server",

@@ -13,7 +13,9 @@
  *
  * Usage: node check-remote.mjs  (exit 0 = safe to publish)
  */
+import { readFileSync } from "node:fs";
 import { validateServerJson, readServerJson } from "./validate-server-json.mjs";
+import { toolTableDrift } from "./tool-drift.mjs";
 
 const TIMEOUT_MS = 30_000;
 
@@ -78,4 +80,16 @@ if (!Array.isArray(tools) || tools.length === 0) {
   process.exit(1);
 }
 console.log(`  tools/list OK — ${tools.length} tool(s): ${tools.map((t) => t.name).join(", ")}`);
+
+// The README tool table is what catalogs and readers see; publishing a record
+// whose docs describe a different server than the one it points at is the
+// drift that hid try_parse from every catalog for its first two days.
+const readme = readFileSync(new URL("./README.md", import.meta.url), "utf8");
+const drift = toolTableDrift(readme, tools.map((t) => t.name));
+if (drift.length) {
+  console.error("README tool table does not match the live server:");
+  for (const e of drift) console.error("  - " + e);
+  process.exit(1);
+}
+console.log("  README tool table matches tools/list");
 console.log(`ready to publish ${server.name} v${server.version}`);
